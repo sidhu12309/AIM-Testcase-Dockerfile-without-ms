@@ -1,0 +1,32 @@
+# Dockerfile for aiml-testcases-aiml-microservices
+FROM python:3.11-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies (MySQL client, Redis, build tools, FFmpeg)
+RUN apt-get update && apt-get install -y \
+    default-mysql-client \
+    default-libmysqlclient-dev \
+    redis-server \
+    gcc \
+    make \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements and install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt \
+    && python -m spacy download en_core_web_md
+
+# Copy service code
+COPY . .
+
+# Expose ports (Python + Redis)
+EXPOSE 8002 6379
+
+# Start Redis in background and run Python service
+CMD redis-server --daemonize yes && \
+    echo "Redis started..." && \
+    python Integration.py
+
