@@ -1,0 +1,51 @@
+ cd API-Gateway-AIML-Microservice/
+ubuntu@ip-172-31-2-84:~/API-Gateway-AIML-Microservice$ cat Dockerfile
+# -------------------------
+# 1) BUILDER STAGE
+# -------------------------
+FROM python:3.11-slim AS builder
+
+# Set working directory
+WORKDIR /app
+
+# Install build dependencies only (not needed in runtime)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc g++ make default-libmysqlclient-dev pkg-config \
+ && rm -rf /var/lib/apt/lists/*
+
+# Create a virtual environment inside builder
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH" \
+    PIP_NO_CACHE_DIR=1
+
+# Upgrade pip and install Python dependencies
+COPY requirements.txt .
+RUN pip install --upgrade pip \
+    && pip install --prefer-binary -r requirements.txt
+
+# -------------------------
+# 2) RUNTIME STAGE
+# -------------------------
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install minimal runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libmariadb3 \
+ && rm -rf /var/lib/apt/lists/*
+
+# Copy virtualenv from builder stage
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH" \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+# Copy only application code (Dockerfile and .dockerignore already handle exclusion)
+COPY . .
+
+# Expose port for your API
+EXPOSE 8000
+
+# Start the gateway
+CMD ["python", "gateway.py"]
