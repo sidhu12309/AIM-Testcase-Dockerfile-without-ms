@@ -1,0 +1,55 @@
+# -----------------
+# Python bytecode / cache
+# -----------------
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# -----------------
+# Virtual environments
+# -----------------
+venv/
+.opt/venv/
+.myenv/
+*.egg-info/
+.eggs/
+
+# -----------------
+# Logs
+# -----------------
+*.log
+
+app.log
+logs/
+job_logs/
+
+# -----------------
+# Test & coverage files
+# -----------------
+.pytest_cache/
+.coverage
+htmlcov/
+tests/__pycache__/
+
+# -----------------
+# System / IDE
+# -----------------
+.DS_Store
+*.swp
+*.swo
+.vscode/
+.idea/
+*.iml
+
+# -----------------
+# Git
+# -----------------
+.git
+.gitignore
+
+# -----------------
+# Docker
+# -----------------
+docker-compose.yml
+.dockerignore
