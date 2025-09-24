@@ -1,0 +1,41 @@
+/API-Gateway-AIML-Microservice$ cat .dockerignore
+# Byte-compiled / cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+myenv/
+venv/
+env/
+.myenv/
+*.egg-info/
+.eggs/
+
+# Logs
+*.log
+api_gateway.logs
+
+# Test & coverage files
+.pytest_cache/
+.coverage
+htmlcov/
+tests/__pycache__/
+
+# System/IDE files
+.DS_Store
+*.swp
+*.swo
+.idea/
+.vscode/
+*.iml
+
+# Git
+.git
+.gitignore
+
+# Docker itself
+Dockerfile
+docker-compose.yml
+.dockerignore
