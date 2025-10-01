@@ -1,33 +1,42 @@
 # ======================
-# Stage 1: Builder (GPU + Build)
+# Stage 1: Builder (GPU + System Dependencies)
 # ======================
 FROM nvidia/cuda:13.0.1-cudnn-runtime-ubuntu24.04 AS builder
 
 WORKDIR /app
 
-# Install build dependencies (without python3.11 via apt)
+# Install system dependencies for building Python packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
     gcc \
     make \
+    curl \
     default-mysql-client \
     default-libmysqlclient-dev \
     redis-server \
     ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
-# Use python:3.11-slim to build Python dependencies (alternative to apt)
+# Copy requirements.txt
 COPY requirements.txt .
 
-# Install Python dependencies in /install (using python:3.11-slim for compilation)
+# ======================
+# Stage 2: Python Builder (Install Python dependencies)
+# ======================
 FROM python:3.11-slim AS python-builder
 WORKDIR /app
+
 COPY requirements.txt .
+
+# Fix networkx version and install Python packages into /install
 RUN sed -i 's/networkx==3.5/networkx==3.4.2/' requirements.txt \
     && python -m pip install --prefix=/install --no-cache-dir -r requirements.txt
 
+# Set PYTHONPATH so Python can find installed packages
+ENV PATH=/install/bin:$PATH
+ENV PYTHONPATH=/install/lib/python3.11/site-packages:$PYTHONPATH
+
 # ======================
-# Stage 2: Final Image (Minimal Runtime)
+# Stage 3: Final Image (Runtime + GPU + Spacy model)
 # ======================
 FROM python:3.11-slim
 
@@ -35,13 +44,13 @@ WORKDIR /app
 
 # Install minimal runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
     default-mysql-client \
     redis-server \
     ffmpeg \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy CUDA libraries from builder for GPU support
+# Copy CUDA runtime from builder
 COPY --from=builder /usr/local/cuda /usr/local/cuda
 ENV PATH=/usr/local/cuda/bin:$PATH
 ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
@@ -49,11 +58,14 @@ ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
 # Copy Python packages from python-builder
 COPY --from=python-builder /install /usr/local
 
+# Install Spacy language model in the final image
+RUN python -m spacy download en_core_web_md
+
 # Copy application code
 COPY . .
 
-# Expose ports
-EXPOSE 8003 6379
+# Expose ports (Python + Redis)
+EXPOSE 8002 6379
 
-# Start Redis and AIML service
-CMD redis-server --daemonize yes && python Integration.py
+# Start Redis and Python service
+CMD ["bash", "-c", "redis-server --daemonize yes && echo 'Redis started...' && python Integration.py"]
