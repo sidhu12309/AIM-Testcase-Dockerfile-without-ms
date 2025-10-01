@@ -1,0 +1,59 @@
+# ======================
+# Stage 1: Builder (GPU + Build)
+# ======================
+FROM nvidia/cuda:13.0.1-cudnn-runtime-ubuntu24.04 AS builder
+
+WORKDIR /app
+
+# Install build dependencies (without python3.11 via apt)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    gcc \
+    make \
+    default-mysql-client \
+    default-libmysqlclient-dev \
+    redis-server \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+# Use python:3.11-slim to build Python dependencies (alternative to apt)
+COPY requirements.txt .
+
+# Install Python dependencies in /install (using python:3.11-slim for compilation)
+FROM python:3.11-slim AS python-builder
+WORKDIR /app
+COPY requirements.txt .
+RUN sed -i 's/networkx==3.5/networkx==3.4.2/' requirements.txt \
+    && python -m pip install --prefix=/install --no-cache-dir -r requirements.txt
+
+# ======================
+# Stage 2: Final Image (Minimal Runtime)
+# ======================
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install minimal runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    default-mysql-client \
+    redis-server \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy CUDA libraries from builder for GPU support
+COPY --from=builder /usr/local/cuda /usr/local/cuda
+ENV PATH=/usr/local/cuda/bin:$PATH
+ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+
+# Copy Python packages from python-builder
+COPY --from=python-builder /install /usr/local
+
+# Copy application code
+COPY . .
+
+# Expose ports
+EXPOSE 8003 6379
+
+# Start Redis and AIML service
+CMD redis-server --daemonize yes && python Integration.py
