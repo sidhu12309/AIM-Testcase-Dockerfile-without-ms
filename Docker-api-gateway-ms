@@ -1,5 +1,3 @@
- cd API-Gateway-AIML-Microservice/
-ubuntu@ip-172-31-2-84:~/API-Gateway-AIML-Microservice$ cat Dockerfile
 # -------------------------
 # 1) BUILDER STAGE
 # -------------------------
