@@ -1,4 +1,4 @@
-# Dockerfile for aiml-testcases-aiml-microservices
+# Dockerfile for JobTestcase-aiml-microservices
 FROM python:3.11-slim
 
 # Set working directory
