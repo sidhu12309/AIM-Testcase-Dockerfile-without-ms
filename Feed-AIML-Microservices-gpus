@@ -53,7 +53,7 @@ COPY --from=python-builder /install /usr/local
 COPY . .
 
 # Expose ports
-EXPOSE 8003 6379
+EXPOSE 8001 6379
 
 # Start Redis and AIML service
-CMD redis-server --daemonize yes && python integration.py
+CMD redis-server --daemonize yes && python app_main.py
