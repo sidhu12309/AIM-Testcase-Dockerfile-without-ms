@@ -1,0 +1,40 @@
+# Dockerfile for Feed-aiml-microservices
+
+# Use official PyTorch runtime (includes CUDA, cuDNN, Python)
+FROM pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime
+
+# Set working directory
+WORKDIR /app
+
+# Install required system packages
+RUN apt-get update && apt-get install -y \
+    default-mysql-client \
+    default-libmysqlclient-dev \
+    redis-server \
+    ffmpeg \
+    tesseract-ocr \
+    libgl1 \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user 'fusionIQ'
+RUN useradd -m -s /bin/bash fusionIQ && \
+    chown -R fusionIQ:fusionIQ /app
+
+USER fusionIQ
+
+# Copy dependencies first for better caching
+COPY --chown=fusionIQ:fusionIQ requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy project code
+COPY --chown=fusionIQ:fusionIQ . .
+
+# Expose application & Redis ports
+EXPOSE 8001 6379
+
+# Start Redis + FastAPI service
+CMD redis-server & \
+    echo "Redis started..." && \
+    sleep 3 && \
+    python app_main.py
